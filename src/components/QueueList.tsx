@@ -14,6 +14,7 @@ export interface QueueListProps {
   onRetry: (id: string) => void
   onCancel: (id: string) => void
   onClear: () => void
+  onRemoveAll?: () => void
   onDownloadTxt: (id: string) => void
   onDownloadJson: (id: string) => void
 }
@@ -48,6 +49,11 @@ export function QueueList(props: QueueListProps) {
           {anyComplete && (
             <button type="button" className="btn btn-sm btn-ghost" onClick={props.onClear}>
               Clear done
+            </button>
+          )}
+          {items.length > 0 && props.onRemoveAll && (
+            <button type="button" className="btn btn-sm btn-ghost" onClick={props.onRemoveAll}>
+              Remove all
             </button>
           )}
           <span className="subtle small" style={{ alignSelf: 'center' }}>

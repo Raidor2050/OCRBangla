@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getProvider, defaultModelFor } from '../ocr/registry'
 import { runDocumentOcr } from '../ocr/pipeline'
 import type { PipelineStage } from '../ocr/types'
-import { detectFileKind } from '../documents/detect'
+import { detectFileKind, SUPPORTED_FORMATS } from '../documents/detect'
 import { useApp } from '../state/AppContext'
 import type { JobItem } from '../state/job'
 import { friendlyJobError, isDoneStatus } from '../state/job'
@@ -12,11 +13,19 @@ import { DocPane } from '../components/DocPane'
 import { TextPane } from '../components/TextPane'
 import { ProcessingControls } from '../components/ProcessingControls'
 import { ConfirmModal } from '../components/ConfirmModal'
+import { ProviderSetup } from '../components/ProviderSetup'
 import { buildZip, zipEntriesForDocument, downloadZip } from '../utils/zip'
 import { buildDocumentJson } from '../utils/exportjson'
-import { SUPPORTED_FORMATS } from '../documents/detect'
 
 let itemSeq = 0
+
+const RECOMMENDED_PROVIDER = 'tesseract'
+
+const PROVIDER_TILES: Array<{ id: string; title: string; sub: string }> = [
+  { id: 'tesseract', title: 'On this device', sub: 'Free and private — runs in your browser' },
+  { id: 'gemini', title: 'Google AI (Gemini)', sub: 'Sends images to Google · needs an API key' },
+  { id: 'openai', title: 'Another AI service', sub: 'OpenAI · Groq · OpenRouter · needs an API key' },
+]
 
 export function ExtractionPage() {
   const { settings, setSettings, statuses, pushToast } = useApp()
@@ -28,11 +37,11 @@ export function ExtractionPage() {
   const [confirm, setConfirm] = useState<{ itemIds: string[]; providerId: string; model?: string } | null>(null)
   const [runnableProviderId, setRunnableProviderId] = useState<string>(() => {
     const p = settings.defaultProviderId
-    return p || 'tesseract'
+    return p || RECOMMENDED_PROVIDER
   })
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const provider = useMemo(() => getProvider(runnableProviderId) ?? getProvider('tesseract')!, [runnableProviderId])
+  const provider = useMemo(() => getProvider(runnableProviderId) ?? getProvider(RECOMMENDED_PROVIDER)!, [runnableProviderId])
   const configured = useMemo(
     () => statuses.find((s) => s.provider.id === provider.id)?.configured ?? provider.type === 'local',
     [statuses, provider],
@@ -53,6 +62,7 @@ export function ExtractionPage() {
 
   const active = items.find((i) => i.id === activeId)
   const runningCount = items.filter((i) => i.status === 'running').length
+  const pendingCount = items.filter((i) => !isDoneStatus(i.status)).length
   const completed = items.filter((i) => i.status === 'complete')
 
   const upsertItem = useCallback((id: string, patch: Partial<JobItem>) => {
@@ -105,7 +115,7 @@ export function ExtractionPage() {
             },
             onRenderedPage: (page, i) => {
               upsertItem(id, {
-                pagesTotal: (item.kind === 'pdf' ? page.index + 1 : 1),
+                pagesTotal: item.kind === 'pdf' ? page.index + 1 : 1,
                 pagesDone: i + 1,
               })
               setItems((prev) =>
@@ -165,7 +175,7 @@ export function ExtractionPage() {
       if (pending.length === 0) return
       if (provider.type === 'api') {
         if (!configured) {
-          pushToast(`${provider.name} is not configured. Add a key on the Models page first.`, 'error')
+          pushToast(`${provider.name} is not set up yet. Add your API key below and save it first.`, 'error')
           return
         }
         if (settings.confirmExternal) {
@@ -224,10 +234,20 @@ export function ExtractionPage() {
     setItems((prev) => prev.filter((i) => !isDoneStatus(i.status)))
   }, [])
 
+  const onRemoveAll = useCallback(() => {
+    setItems((prev) => {
+      prev.forEach((it) => {
+        if (it.status === 'running') it.controller?.abort()
+      })
+      return []
+    })
+    setActiveId(undefined)
+  }, [])
+
   const downloadAllZip = useCallback(() => {
     const done = items.filter((i) => i.status === 'complete' && i.result)
     if (done.length === 0) {
-      pushToast('No completed documents to export.', 'error')
+      pushToast('No completed documents to export yet. Read your images first.', 'error')
       return
     }
     const entries = done.flatMap((it) =>
@@ -235,6 +255,7 @@ export function ExtractionPage() {
     )
     const bytes = buildZip(entries)
     downloadZip(bytes, `ordinary-chobi-reader-${new Date().toISOString().slice(0, 10)}.zip`)
+    pushToast(`Saved ${done.length} document${done.length === 1 ? '' : 's'} as a ZIP file.`, 'success')
   }, [items, pushToast])
 
   const activePageCanvas = active?.previews[pageIndex] ?? active?.previews[0] ?? null
@@ -260,101 +281,163 @@ export function ExtractionPage() {
     return () => window.removeEventListener('paste', onPaste)
   }, [addFiles])
 
+  const pickProvider = useCallback(
+    (id: string) => {
+      if (id === runnableProviderId) return
+      setRunnableProviderId(id)
+      setModel(defaultModelFor(id))
+    },
+    [runnableProviderId],
+  )
+
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {/* Control deck */}
-      <div style={{ borderBottom: '1px solid var(--line)', padding: 'var(--sp-4)' }}>
-        <div style={{ display: 'flex', gap: 'var(--sp-3)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"
-            multiple
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              if (e.target.files) addFiles(Array.from(e.target.files))
-              e.target.value = ''
-            }}
-          />
-          <button type="button" className="btn btn-accent" onClick={() => inputRef.current?.click()}>
-            Upload documents
-          </button>
-          <span
-            role="button"
-            tabIndex={0}
-            className="dropzone-inline subtle small"
-            style={{ cursor: 'pointer' }}
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click()
-            }}
-          >
-            or drop images anywhere, paste from clipboard
-          </span>
+      {/* Batch OCR deck */}
+      <div style={{ borderBottom: '1px solid var(--line)', padding: 'var(--sp-4)', display: 'grid', gap: 'var(--sp-4)' }}>
+        <span className="deck-title">Batch OCR</span>
 
-          <span style={{ width: 1, height: 24, background: 'var(--line)' }} aria-hidden="true" />
-
-          <label className="field" style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <span className="field-label">Model</span>
-            <select
-              className="select"
-              value={provider.id}
-              onChange={(e) => {
-                const id = e.target.value
-                setRunnableProviderId(id)
-                setModel(defaultModelFor(id))
-              }}
-              aria-label="OCR provider"
-            >
-              <option value="tesseract">Tesseract · local</option>
-              <option value="gemini">Gemini · API</option>
-              <option value="openai">OpenAI-compatible · API</option>
-            </select>
-            {provider.type === 'api' &&
-              modelOptions.length > 0 && (
-                <select className="select" value={model ?? ''} onChange={(e) => setModel(e.target.value)} aria-label="API model">
-                  {modelOptions.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+        {/* Step 1 — import */}
+        <div className="step-line" style={{ alignItems: 'flex-start' }}>
+          <span className="step-num">1</span>
+          <div style={{ flex: 1, display: 'grid', gap: 'var(--sp-2)' }}>
+            <span className="step-label">Import your images or PDFs</span>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf"
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  if (e.target.files) addFiles(Array.from(e.target.files))
+                  e.target.value = ''
+                }}
+              />
+              <button type="button" className="btn btn-accent" onClick={() => inputRef.current?.click()}>
+                + Add images or PDFs
+              </button>
+              <span className="subtle small">
+                You can pick several at once — or drag them onto this page, or paste from clipboard.
+              </span>
+              {items.length > 0 && (
+                <span className="chip chip-accent">{items.length} in queue</span>
               )}
-          </label>
-
-          {!configured && provider.type === 'api' && (
-            <span className="chip chip-warn">not configured</span>
-          )}
-          {configured && provider.type === 'api' && (
-            <span className="chip chip-accent">external</span>
-          )}
-          {provider.type === 'local' && <span className="chip chip-ok">local · private</span>}
-
-          <span style={{ flex: 1 }} />
-
-          <button type="button" className="btn" onClick={() => setShowAdvanced((v) => !v)} aria-expanded={showAdvanced}>
-            Processing {showAdvanced ? '▾' : '▸'}
-          </button>
-          <button type="button" className="btn" onClick={downloadAllZip} disabled={completed.length === 0}>
-            Download all ZIP
-          </button>
-          {runningCount > 0 ? (
-            <button type="button" className="btn" onClick={onCancelAll}>
-              Cancel
-            </button>
-          ) : (
-            <button type="button" className="btn btn-primary" onClick={runAll} disabled={items.length === 0}>
-              Run OCR
-            </button>
-          )}
+            </div>
+          </div>
         </div>
 
-        <div style={{ marginTop: 'var(--sp-3)' }}>
-          <PipelineBar stages={active?.stage ? [active.stage] : []} />
+        {/* Step 2 — choose reader */}
+        <div className="step-line" style={{ alignItems: 'flex-start' }}>
+          <span className="step-num">2</span>
+          <div style={{ flex: 1, display: 'grid', gap: 'var(--sp-2)' }}>
+            <span className="step-label">Choose how your documents are read</span>
+            <div className="setup-tiles" role="radiogroup" aria-label="OCR provider">
+              {PROVIDER_TILES.map((t) => {
+                const selected = provider.id === t.id
+                return (
+                  <div
+                    key={t.id}
+                    role="radio"
+                    aria-checked={selected}
+                    tabIndex={0}
+                    className={'setup-tile' + (selected ? ' active' : '')}
+                    onClick={() => pickProvider(t.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') pickProvider(t.id)
+                    }}
+                  >
+                    <span className="setup-tile-title">
+                      {t.title}
+                      {t.id === RECOMMENDED_PROVIDER && <span className="chip chip-ok" style={{ marginLeft: 6 }}>Recommended</span>}
+                    </span>
+                    <span className="small muted">{t.sub}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {provider.type === 'local' && (
+              <div className="row" style={{ gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                <span className="chip chip-ok">Private · works offline · no key needed</span>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)' }}>
+                  Language
+                  <select
+                    className="select"
+                    value={model ?? 'ben'}
+                    onChange={(e) => setModel(e.target.value)}
+                    aria-label="Tesseract language"
+                  >
+                    {modelOptions.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
+
+            {provider.type === 'api' && configured && (
+              <div className="row" style={{ gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
+                <span className="chip chip-accent">Key saved on this device</span>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)' }}>
+                  Model
+                  <select className="select" value={model ?? ''} onChange={(e) => setModel(e.target.value)} aria-label="API model">
+                    {modelOptions.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Link to="/models" className="link small">
+                  Change key
+                </Link>
+              </div>
+            )}
+
+            {provider.type === 'api' && !configured && (
+              <ProviderSetup provider={provider} model={model} onModelChange={setModel} onSaved={() => {}} />
+            )}
+          </div>
+        </div>
+
+        {/* Step 3 — run & save */}
+        <div className="step-line" style={{ alignItems: 'flex-start' }}>
+          <span className="step-num">3</span>
+          <div style={{ flex: 1, display: 'grid', gap: 'var(--sp-2)' }}>
+            <span className="step-label">Read them all, then save</span>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+              {runningCount > 0 ? (
+                <button type="button" className="btn btn-ghost" onClick={onCancelAll}>
+                  Stop
+                </button>
+              ) : (
+                <button type="button" className="btn btn-primary" onClick={runAll} disabled={items.length === 0}>
+                  Read my {items.length === 1 ? 'image' : `${items.length} images`}
+                </button>
+              )}
+              <button type="button" className="btn btn-secondary" onClick={downloadAllZip} disabled={completed.length === 0} title="Save every completed document as a ZIP">
+                Save everything (ZIP)
+                {completed.length > 0 && <span className="chip chip-ok" style={{ marginLeft: 8 }}>{completed.length}</span>}
+              </button>
+              {pendingCount > 0 && completed.length > 0 && (
+                <span className="subtle small">
+                  {completed.length} of {items.length} ready to save — reading the rest…
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => setShowAdvanced((v) => !v)} aria-expanded={showAdvanced}>
+                Advanced options {showAdvanced ? '▾' : '▸'}
+              </button>
+              <PipelineBar stages={active?.stage ? [active.stage] : []} />
+            </div>
+          </div>
         </div>
 
         {showAdvanced && (
-          <div className="panel" style={{ marginTop: 'var(--sp-3)', padding: 'var(--sp-4)' }}>
+          <div className="panel" style={{ padding: 'var(--sp-4)', marginTop: 'var(--sp-1)' }}>
             <ProcessingControls
               preprocess={settings.preprocess}
               onChange={(patch) => setSettings({ preprocess: { ...settings.preprocess, ...patch } })}
@@ -378,45 +461,46 @@ export function ExtractionPage() {
           onRetry={onRetry}
           onCancel={(id) => items.find((i) => i.id === id)?.controller?.abort()}
           onClear={onClear}
+          onRemoveAll={onRemoveAll}
           onDownloadTxt={() => {}}
           onDownloadJson={() => {}}
         />
         {items.length > 0 && active?.result && (() => {
           const r = active.result
           return (
-          <div style={{ display: 'flex', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-            {r.pages.length > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={pageIndex <= 0}
-                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                >
-                  ←
-                </button>
-                <span className="mono-number">
-                  Page {pageIndex + 1} / {r.pages.length}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={pageIndex >= r.pages.length - 1}
-                  onClick={() => setPageIndex((p) => Math.min(r.pages.length - 1, p + 1))}
-                >
-                  →
-                </button>
-              </div>
-            )}
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={showOverlay} onChange={(e) => setShowOverlay(e.target.checked)} />
-              Show detected line regions
-            </label>
-            <span className="subtle small">Regions come from the OCR engine itself — never synthesized.</span>
-            {active?.status === 'running' && active.detail && (
-              <span className="chip chip-accent">{active.detail}</span>
-            )}
-          </div>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)', marginTop: 'var(--sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+              {r.pages.length > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    disabled={pageIndex <= 0}
+                    onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                  >
+                    ←
+                  </button>
+                  <span className="mono-number">
+                    Page {pageIndex + 1} / {r.pages.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    disabled={pageIndex >= r.pages.length - 1}
+                    onClick={() => setPageIndex((p) => Math.min(r.pages.length - 1, p + 1))}
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={showOverlay} onChange={(e) => setShowOverlay(e.target.checked)} />
+                Show detected line regions
+              </label>
+              <span className="subtle small">Regions come from the OCR engine itself — never synthesized.</span>
+              {active?.status === 'running' && active.detail && (
+                <span className="chip chip-accent">{active.detail}</span>
+              )}
+            </div>
           )
         })()}
       </div>
@@ -438,11 +522,7 @@ export function ExtractionPage() {
             busy={active?.status === 'running'}
             stage={active?.stage}
             fileName={active?.file.name ?? ''}
-            pageLabel={
-              active && activeKinds(active) === 'pdf' && active.result
-                ? `page ${pageIndex + 1}`
-                : undefined
-            }
+            pageLabel={active?.kind === 'pdf' && active.result ? `page ${pageIndex + 1}` : undefined}
             detail={active?.detail}
             showOverlay={showOverlay}
           />
@@ -479,8 +559,4 @@ export function ExtractionPage() {
       )}
     </div>
   )
-}
-
-function activeKinds(it: JobItem): JobItem['kind'] {
-  return it.kind
 }

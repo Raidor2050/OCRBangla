@@ -1104,3 +1104,89 @@ textarea.textarea {
   padding: var(--sp-2) var(--sp-4);
   border-top: 1px solid var(--line);
 }
+.link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.link:hover {
+  color: var(--accent-strong);
+}
+.btn-secondary {
+  background: var(--accent-soft);
+  color: var(--btn-fg);
+  border: 1px solid var(--accent);
+}
+.btn-secondary:hover {
+  background: var(--accent);
+  color: var(--btn-bg);
+}
+.chip-btn {
+  background: transparent;
+  border: 1px solid var(--line2);
+  border-radius: var(--r2);
+  font-size: var(--fs-sm);
+  padding: 2px 8px;
+  cursor: pointer;
+  color: var(--ink);
+}
+.chip-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.deck-title {
+  font-weight: 700;
+  font-size: var(--fs-lg);
+}
+.step-line {
+  display: flex;
+  gap: var(--sp-3);
+}
+.step-num {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r3);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  border: 1px solid var(--accent);
+}
+.step-label {
+  font-weight: 600;
+}
+.setup-tiles {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.setup-tile {
+  flex: 1 1 200px;
+  max-width: 280px;
+  padding: var(--sp-3);
+  border: 1px solid var(--line2);
+  border-radius: var(--r3);
+  background: var(--bg2);
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  user-select: none;
+}
+.setup-tile:hover {
+  border-color: var(--accent);
+}
+.setup-tile.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.setup-tile-title {
+  font-weight: 600;
+}
+.setup-box {
+  border: 1px dashed var(--line2);
+  background: var(--bg2);
+}
