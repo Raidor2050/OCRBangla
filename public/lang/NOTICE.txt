@@ -1,0 +1,18 @@
+Bengali traineddata for Tesseract.js
+====================================
+
+File:     ben.traineddata.gz   (1,373,429 bytes)
+Source:   @tesseract.js-data/ben 1.0.0 on npm / jsDelivr
+          https://cdn.jsdelivr.net/npm/@tesseract.js-data/ben@1.0.0/4.0.0_best_int/ben.traineddata.gz
+Wrap:     tessdata_best_int (4.0.0_best_int)
+
+License:  Apache License 2.0
+          Both the Tesseract OCR engine and its trained language data are
+          released under the Apache License 2.0.
+
+          https://github.com/tesseract-ocr/tessdata_best
+          https://www.apache.org/licenses/LICENSE-2.0
+
+This file is distributed -as received- with the app because GitHub Pages
+cannot guarantee the CDN is reachable by every visitor; committing it keeps
+local OCR fully deterministic and offline-capable once the app is loaded.

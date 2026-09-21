@@ -1,0 +1,132 @@
+/* Ordinary Chobi Reader — design tokens */
+
+:root {
+  /* Spacing (4px base) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-10: 48px;
+  --sp-12: 64px;
+
+  /* Typography */
+  --font-latin: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-bangla: 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Bangla MN', sans-serif;
+  --font-bangla-serif: 'Noto Serif Bengali', 'Noto Sans Bengali', 'Nirmala UI', serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-base: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 30px;
+
+  --lh-tight: 1.35;
+  --lh-body-latin: 1.6;
+  --lh-body-bangla: 1.8;
+  --lh-reading: 1.9;
+
+  --tracking-label: 0.04em;
+
+  /* Radius */
+  --r1: 4px;
+  --r2: 6px;
+  --r3: 8px;
+  --r4: 12px;
+  --r-pill: 999px;
+
+  /* Controls */
+  --control-h: 32px;
+  --control-h-dense: 28px;
+
+  /* Motion */
+  --dur-micro: 80ms;
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-medium: 280ms;
+  --dur-slow: 400ms;
+  --dur-long: 600ms;
+  --dur-sweep: 1400ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-settle: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Elevation */
+  --shadow-pop: 0 2px 8px rgba(16, 17, 20, 0.08), 0 12px 32px -8px rgba(16, 17, 20, 0.16);
+  --shadow-dialog: 0 6px 18px rgba(16, 17, 20, 0.12), 0 24px 64px -16px rgba(16, 17, 20, 0.24);
+
+  /* Layout */
+  --topbar-h: 52px;
+  --maxw: 1440px;
+}
+
+:root {
+  color-scheme: light;
+
+  --bg: #fcfcfd;
+  --bg2: #f8f9fa;
+  --bg3: #f1f3f5;
+  --line: #e4e6ea;
+  --line2: #c9cdd3;
+  --ink: #1c2024;
+  --ink2: #5a5f67;
+  --ink3: #8a9098;
+  --accent: #3e63dd;
+  --accent-strong: #3358d4;
+  --accent-soft: rgba(62, 99, 221, 0.1);
+  --accent-ink: #3a5bc7;
+  --ok: #18794e;
+  --ok-soft: #e6f4ef;
+  --warn: #ad5700;
+  --warn-soft: #fff4e5;
+  --error: #d93036;
+  --error-soft: #ffecee;
+  --paper: #fdfbf7;
+  --paper-line: #eceae3;
+  --focus-ring: rgba(62, 99, 221, 0.4);
+  --scrollbar: #cdd1d7;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #111113;
+  --bg2: #17181b;
+  --bg3: #1e2024;
+  --line: #26282e;
+  --line2: #363943;
+  --ink: #eceeef;
+  --ink2: #9da1a8;
+  --ink3: #6c7178;
+  --accent: #5e6ad2;
+  --accent-strong: #6f7be0;
+  --accent-soft: rgba(94, 106, 210, 0.16);
+  --accent-ink: #aab4f0;
+  --ok: #30a46c;
+  --ok-soft: #12251c;
+  --warn: #ffb224;
+  --warn-soft: #2a1f0a;
+  --error: #e5484d;
+  --error-soft: #2a1416;
+  --paper: #191a17;
+  --paper-line: #2b2c28;
+  --focus-ring: rgba(110, 124, 220, 0.5);
+  --scrollbar: #45484f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+}
