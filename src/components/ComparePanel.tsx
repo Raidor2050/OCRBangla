@@ -25,10 +25,7 @@ function usableProviders(): Array<{ id: string; label: string; models: { id: str
   return ALL_PROVIDERS.map((p) => ({
     id: p.id,
     label: p.name,
-    models:
-      p.id === 'tesseract'
-        ? [{ id: 'ben', label: 'Bengali (local)' }]
-        : p.models.map((m) => ({ id: m.id, label: m.label })),
+    models: p.models.map((m) => ({ id: m.id, label: m.label })),
     type: p.type,
   }))
 }

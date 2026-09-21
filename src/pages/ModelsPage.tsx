@@ -154,7 +154,10 @@ export function ModelsPage() {
         )}
         <div style={{ display: 'flex', gap: 'var(--sp-2)', alignItems: 'center', flexWrap: 'wrap' }}>
           <InputShell label="Model">
-            <code>ben — Bengali (tessdata)</code>
+            <code>ben — Bengali print (tessdata_best_int)</code>
+          </InputShell>
+          <InputShell label="Experimental">
+            <code>ben-hand — Bengali handwriting (experimental)</code>
           </InputShell>
           <button
             type="button"

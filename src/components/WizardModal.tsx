@@ -187,8 +187,8 @@ export function WizardModal(props: WizardModalProps) {
                 <div className="row" style={{ gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
                   <span className="chip chip-ok">The Bengali model is built into this app</span>
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)' }}>
-                    Language
-                    <select className="select" value={model ?? 'ben'} onChange={(e) => onModelChange(e.target.value)} aria-label="Tesseract language">
+                    Language / mode
+                    <select className="select" value={model ?? 'ben'} onChange={(e) => onModelChange(e.target.value)} aria-label="Tesseract model mode">
                       {modelOptions.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.label}
@@ -201,6 +201,15 @@ export function WizardModal(props: WizardModalProps) {
                       No key needed — your images never leave this device.
                     </span>
                   )}
+                </div>
+              )}
+
+              {provider.type === 'local' && model === 'ben-hand' && (
+                <div className="callout callout-warn">
+                  <strong>Experimental — verify results.</strong>{' '}
+                  Bangla handwriting recognition is research-grade: ~94% character accuracy on clean single words,
+                  ~70–74% on full handwritten lines, and much lower on photos or unusual handwriting. Runs fully on
+                  this device.
                 </div>
               )}
 

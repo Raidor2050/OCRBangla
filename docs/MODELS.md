@@ -5,6 +5,7 @@
 | Model | Runs | Your documents? | Good for | Limitations |
 |---|---|---|---|---|
 | Tesseract `ben` (local) | In-browser WebAssembly | Never leave the device | Private/offline OCR; free; real confidence + line/word boxes | Modest accuracy on poor scans; needs preprocessing (auto, by default) |
+| Tesseract `ben-hand` (local, experimental) | In-browser WebAssembly | Never leave the device | Handwritten notes — line-by-line re-recognition of the built-in engine | **Research-grade**: see [Handwriting research](research/HANDWRITING_RESEARCH.md); far below print accuracy; always verify |
 | Google Gemini (flash/pro) | Google's servers | Sent to Google when you run | Clean printed/typed Bangla; strong layout understanding | No per-character confidence; API key migration risk; paid |
 | OpenAI-compatible (GPT-4o-family, Groq, OpenRouter…) | Provider's servers | Sent to provider when you run | Vision models with good document reading | Browser CORS varies by endpoint; paid; no per-character confidence |
 

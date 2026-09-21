@@ -50,10 +50,7 @@ export function ExtractionPage() {
     [statuses, provider],
   )
 
-  const modelOptions = useMemo(() => {
-    if (provider.id === 'tesseract') return [{ id: 'ben', label: 'Bengali (tessdata_best_int)' }]
-    return provider.models
-  }, [provider])
+  const modelOptions = useMemo(() => provider.models, [provider])
 
   const [model, setModel] = useState<string | undefined>(() => defaultModelFor(settings.defaultProviderId))
 
@@ -383,12 +380,12 @@ export function ExtractionPage() {
               <div className="row" style={{ gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
                 <span className="chip chip-ok">Private · works offline · no key needed</span>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-sm)' }}>
-                  Language
+                  Language / mode
                   <select
                     className="select"
                     value={model ?? 'ben'}
                     onChange={(e) => setModel(e.target.value)}
-                    aria-label="Tesseract language"
+                    aria-label="Tesseract model mode"
                   >
                     {modelOptions.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -397,6 +394,16 @@ export function ExtractionPage() {
                     ))}
                   </select>
                 </label>
+              </div>
+            )}
+
+            {provider.type === 'local' && model === 'ben-hand' && (
+              <div className="callout callout-warn" style={{ maxWidth: 720 }}>
+                <strong>Experimental — verify results.</strong>{' '}
+                Bangla handwriting recognition is research-grade. The best published local models reach ~94% character
+                accuracy only on clean, single words; full handwritten lines drop to ~70–74%, and photos, ink bleed,
+                or unusual handwriting can go far lower. This mode runs entirely on your device (line-by-line
+                re-recognition of the built-in engine). Preferred for handwriting, not a substitute for careful review.
               </div>
             )}
 
