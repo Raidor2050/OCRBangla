@@ -14,6 +14,7 @@ import { TextPane } from '../components/TextPane'
 import { ProcessingControls } from '../components/ProcessingControls'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { ProviderSetup } from '../components/ProviderSetup'
+import { WizardModal, type WizardStep } from '../components/WizardModal'
 import { buildZip, zipEntriesForDocument, downloadZip } from '../utils/zip'
 import { buildDocumentJson } from '../utils/exportjson'
 
@@ -35,6 +36,8 @@ export function ExtractionPage() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showOverlay, setShowOverlay] = useState(true)
   const [confirm, setConfirm] = useState<{ itemIds: string[]; providerId: string; model?: string } | null>(null)
+  const [wizardOpen, setWizardOpen] = useState(true)
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1)
   const [runnableProviderId, setRunnableProviderId] = useState<string>(() => {
     const p = settings.defaultProviderId
     return p || RECOMMENDED_PROVIDER
@@ -205,9 +208,24 @@ export function ExtractionPage() {
           it.controller?.abort()
           return { ...it }
         }
+        if (it.status === 'queued') {
+          return { ...it, status: 'cancelled', stage: null, controller: undefined }
+        }
         return it
       }),
     )
+  }, [])
+
+  const openWizard = useCallback(() => {
+    setWizardStep(1)
+    setWizardOpen(true)
+  }, [])
+
+  const nextWizardStep = useCallback(() => setWizardStep((s) => (s < 3 ? ((s + 1) as WizardStep) : s)), [])
+  const backWizardStep = useCallback(() => setWizardStep((s) => (s > 1 ? ((s - 1) as WizardStep) : s)), [])
+
+  const closeWizard = useCallback(() => {
+    setWizardOpen(false)
   }, [])
 
   const onRemove = useCallback(
@@ -294,7 +312,12 @@ export function ExtractionPage() {
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {/* Batch OCR deck */}
       <div style={{ borderBottom: '1px solid var(--line)', padding: 'var(--sp-4)', display: 'grid', gap: 'var(--sp-4)' }}>
-        <span className="deck-title">Batch OCR</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-2)' }}>
+          <span className="deck-title">Batch OCR</span>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={openWizard}>
+            Open guided flow
+          </button>
+        </div>
 
         {/* Step 1 — import */}
         <div className="step-line" style={{ alignItems: 'flex-start' }}>
@@ -532,6 +555,34 @@ export function ExtractionPage() {
           <TextPane result={active?.result} />
         </div>
       </div>
+
+      {wizardOpen && (
+        <WizardModal
+          step={wizardStep}
+          items={items}
+          activeId={activeId}
+          onSelect={(id) => {
+            setActiveId(id)
+            setPageIndex(0)
+          }}
+          provider={provider}
+          configured={configured}
+          model={model}
+          modelOptions={modelOptions}
+          onModelChange={setModel}
+          onAddFiles={addFiles}
+          onPickProvider={(id) => {
+            setRunnableProviderId(id)
+            setModel(defaultModelFor(id))
+          }}
+          onRun={() => requestRun(items.map((i) => i.id))}
+          onCancelRun={onCancelAll}
+          onSaveZip={downloadAllZip}
+          onBack={backWizardStep}
+          onNext={nextWizardStep}
+          onClose={closeWizard}
+        />
+      )}
 
       {confirm && (
         <ConfirmModal
